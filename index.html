@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>石川ゼミ イベント希望調査アンケート</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1B81B0;
+    font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    color: #163A4D;
+    padding-bottom: 64px;
+  }
+  .hero { background: #1B81B0; color: #FFF; padding: 36px 20px 28px; text-align: center; position: relative; overflow: hidden; }
+  .hero-eyebrow { display: inline-block; font-size: 12px; letter-spacing: .25em; color: #FFC93C; border: 1px solid #FFC93C; padding: 4px 14px; border-radius: 999px; margin-bottom: 14px; }
+  .hero h1 { font-size: clamp(24px, 6vw, 34px); font-weight: 800; letter-spacing: .02em; line-height: 1.3; }
+  .hero p { margin-top: 10px; font-size: 13px; color: #D6EEF9; }
+  .lanterns { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 8px; pointer-events: none; }
+  .lantern { width: 10px; background: #FFC93C; border-radius: 0 0 6px 6px; opacity: .85; }
+  .tabs { display: flex; max-width: 640px; margin: -18px auto 0; padding: 0 16px; position: relative; z-index: 2; gap: 8px; }
+  .tab { flex: 1; padding: 13px 0; border: none; border-radius: 12px 12px 0 0; font-size: 15px; font-weight: 700; cursor: pointer; background: #3D97BE; color: #D6EEF9; }
+  .tab.active { background: #F0F8FC; color: #1B81B0; }
+  .sheet { max-width: 640px; margin: 0 auto; background: #F0F8FC; border-radius: 0 0 16px 16px; padding: 26px 20px 32px; min-height: 400px; }
+  .q-label { font-size: 14px; font-weight: 800; margin: 26px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .q-label:first-child { margin-top: 0; }
+  .q-num { background: #1B81B0; color: #FFC93C; font-size: 11px; font-weight: 800; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .req { color: #D8504D; font-size: 11px; font-weight: 600; }
+  input[type=text], textarea, select { width: 100%; padding: 12px 14px; font-size: 15px; border: 1.5px solid #B9D7E4; border-radius: 10px; background: #FFF; font-family: inherit; color: #163A4D; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid #1B81B0; border-color: #1B81B0; }
+  .event-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .event-card { position: relative; border: 1.5px solid #B9D7E4; border-radius: 12px; background: #FFF; padding: 14px 10px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 700; color: #163A4D; transition: transform .1s, border-color .15s; }
+  .event-card:active { transform: scale(.97); }
+  .event-card .emoji { font-size: 26px; display: block; margin-bottom: 4px; }
+  .event-card.selected { border-color: #D8504D; background: #FFF6F2; }
+  .stamp { position: absolute; top: -8px; right: -8px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #D8504D; color: #D8504D; background: rgba(255,255,255,.92); font-size: 9px; font-weight: 800; line-height: 1.15; display: flex; align-items: center; justify-content: center; transform: rotate(12deg); }
+  .submit-btn { width: 100%; margin-top: 30px; padding: 16px; background: #D8504D; color: #FFF; border: none; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; letter-spacing: .05em; }
+  .submit-btn:disabled { background: #B9D7E4; cursor: not-allowed; }
+  .note { font-size: 11px; color: #6E8FA0; margin-top: 10px; text-align: center; }
+  .done-box { text-align: center; padding: 60px 10px; }
+  .done-box .big { font-size: 48px; }
+  .done-box h2 { font-size: 20px; margin: 14px 0 8px; }
+  .done-box p { font-size: 13px; color: #557083; }
+  .ghost-btn { margin-top: 22px; padding: 11px 24px; background: none; border: 1.5px solid #1B81B0; color: #1B81B0; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .mini-btn { margin: 0 0 0 12px; padding: 6px 14px; font-size: 12px; background: none; border: 1.5px solid #1B81B0; color: #1B81B0; border-radius: 10px; font-weight: 700; cursor: pointer; }
+  .count-banner { font-size: 13px; font-weight: 700; color: #557083; margin-bottom: 18px; }
+  .bar-row { margin-bottom: 12px; }
+  .bar-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .bar-track { background: #DBEDF5; border-radius: 999px; height: 14px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #1B81B0; border-radius: 999px; transition: width .4s; }
+  .bar-fill.top { background: #D8504D; }
+  .comment-card { background: #FFF; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; font-size: 13px; border-left: 4px solid #FFC93C; }
+  .comment-card .who { font-size: 11px; color: #6E8FA0; margin-top: 4px; }
+  .ai-btn { width: 100%; margin-top: 24px; padding: 16px; background: #1B81B0; color: #FFC93C; border: none; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; letter-spacing: .05em; }
+  .ai-btn:disabled { opacity: .6; cursor: wait; }
+  .ai-box { margin-top: 20px; background: #FFF; border-radius: 14px; padding: 20px 18px; border: 1.5px solid #1B81B0; }
+  .ai-box h3 { font-size: 13px; color: #D8504D; letter-spacing: .15em; border-bottom: 1.5px solid #DBEDF5; padding-bottom: 6px; margin: 18px 0 10px; }
+  .ai-box h3:first-child { margin-top: 0; }
+  .ai-box p, .ai-box li { font-size: 14px; line-height: 1.8; }
+  .ai-box ol { padding-left: 20px; }
+  .proposal { background: #EAF6FC; border-radius: 10px; padding: 14px; margin-top: 8px; }
+  .proposal .p-title { font-weight: 800; font-size: 15px; margin-bottom: 6px; }
+  .err { color: #D8504D; font-size: 13px; margin-top: 10px; text-align: center; }
+  .info { color: #557083; font-size: 13px; margin-top: 10px; text-align: center; background: #EAF6FC; border-radius: 10px; padding: 12px; }
+  .section-title { font-size: 15px; font-weight: 800; margin: 24px 0 12px; }
+  .empty { text-align: center; padding: 50px 10px; color: #6E8FA0; font-size: 14px; }
+  .reset-link { display: block; margin: 28px auto 0; background: none; border: none; color: #9FBECD; font-size: 11px; text-decoration: underline; cursor: pointer; }
+  .reset-link.arm { color: #D8504D; font-weight: 800; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="lanterns" id="lanterns"></div>
+  <span class="hero-eyebrow">石川ゼミ</span>
+  <h1>ゼミイベント<br />希望調査アンケート</h1>
+  <p>みんなの「やりたい!」を集めて、AIが企画を提案します</p>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" id="tab-answer" onclick="showTab('answer')">✏️ 回答する</button>
+  <button class="tab" id="tab-results" onclick="showTab('results')">📊 結果・AI分析</button>
+</nav>
+
+<main class="sheet">
+  <!-- 回答フォーム -->
+  <div id="panel-answer">
+    <div class="q-label"><span class="q-num">1</span>名前(ニックネーム可)<span class="req">必須</span></div>
+    <input type="text" id="f-name" placeholder="例:けいご" oninput="checkForm()" />
+
+    <div class="q-label"><span class="q-num">2</span>やりたいイベント(複数OK)<span class="req">必須</span></div>
+    <div class="event-grid" id="event-grid"></div>
+
+    <div class="q-label"><span class="q-num">3</span>希望時期<span class="req">必須</span></div>
+    <select id="f-timing" onchange="checkForm()"></select>
+
+    <div class="q-label"><span class="q-num">4</span>予算感<span class="req">必須</span></div>
+    <select id="f-budget" onchange="checkForm()"></select>
+
+    <div class="q-label"><span class="q-num">5</span>ひとことコメント(任意)</div>
+    <textarea id="f-comment" rows="3" placeholder="例:BBQなら車出せます!/お酒飲めない人も楽しめる企画がいいな"></textarea>
+
+    <button class="submit-btn" id="submit-btn" disabled onclick="submitResponse()">回答を送信する</button>
+    <p class="err" id="form-err" style="display:none"></p>
+    <p class="note">※ 回答は結果ページでゼミ生全員に共有されます</p>
+  </div>
+
+  <!-- 送信完了 -->
+  <div id="panel-done" style="display:none">
+    <div class="done-box">
+      <span class="big">🎉</span>
+      <h2>回答ありがとう!</h2>
+      <p>結果タブからみんなの希望が見られます</p>
+      <button class="ghost-btn" onclick="resetForm()">もう1件回答する</button>
+    </div>
+  </div>
+
+  <!-- 結果 -->
+  <div id="panel-results" style="display:none"></div>
+</main>
+
+<script>
+/* ============================================================
+   ① ここに自分のSupabaseの情報を貼り付ける!
+   Supabase管理画面 → 左下の歯車(Project Settings) → API
+   ============================================================ */
+const SUPABASE_URL = "ここにProject URLを貼る";        // 例: https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = "ここにanon publicキーを貼る"; // eyJ... で始まる長い文字列
+/* ============================================================ */
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const EVENTS = [
+  { id: "nomikai", label: "飲み会", emoji: "🍻" },
+  { id: "bbq", label: "BBQ", emoji: "🍖" },
+  { id: "sports", label: "スポーツ大会", emoji: "🏐" },
+  { id: "takopa", label: "たこパ", emoji: "🐙" },
+  { id: "trip", label: "日帰り旅行", emoji: "🚌" },
+  { id: "game", label: "ボドゲ会", emoji: "🎲" },
+];
+const TIMINGS = ["6月中", "7月前半", "7月後半(テスト前は避けたい)", "夏休み中", "いつでもOK"];
+const BUDGETS = ["〜2,000円", "2,000〜4,000円", "4,000〜6,000円", "6,000円以上もOK"];
+
+let picked = [];
+let responses = [];
+let resetArmed = false;
+let resetTimer = null;
+
+// ---------- 初期描画 ----------
+document.getElementById("lanterns").innerHTML =
+  Array.from({ length: 12 }).map((_, i) => `<span class="lantern" style="height:${10 + ((i * 7) % 12)}px"></span>`).join("");
+
+document.getElementById("event-grid").innerHTML = EVENTS.map(e => `
+  <button class="event-card" id="ev-${e.id}" onclick="toggleEvent('${e.id}')">
+    <span class="stamp" style="display:none">参加<br/>したい!</span>
+    <span class="emoji">${e.emoji}</span>${e.label}
+  </button>`).join("");
+
+document.getElementById("f-timing").innerHTML =
+  `<option value="">選択してください</option>` + TIMINGS.map(t => `<option>${t}</option>`).join("");
+document.getElementById("f-budget").innerHTML =
+  `<option value="">選択してください</option>` + BUDGETS.map(b => `<option>${b}</option>`).join("");
+
+// ---------- フォーム操作 ----------
+function toggleEvent(id) {
+  picked = picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id];
+  const card = document.getElementById("ev-" + id);
+  card.classList.toggle("selected", picked.includes(id));
+  card.querySelector(".stamp").style.display = picked.includes(id) ? "flex" : "none";
+  checkForm();
+}
+
+function checkForm() {
+  const ok = document.getElementById("f-name").value.trim()
+    && picked.length > 0
+    && document.getElementById("f-timing").value
+    && document.getElementById("f-budget").value;
+  document.getElementById("submit-btn").disabled = !ok;
+}
+
+function resetForm() {
+  document.getElementById("f-name").value = "";
+  document.getElementById("f-comment").value = "";
+  document.getElementById("f-timing").value = "";
+  document.getElementById("f-budget").value = "";
+  picked = [];
+  EVENTS.forEach(e => {
+    const c = document.getElementById("ev-" + e.id);
+    c.classList.remove("selected");
+    c.querySelector(".stamp").style.display = "none";
+  });
+  checkForm();
+  document.getElementById("panel-done").style.display = "none";
+  document.getElementById("panel-answer").style.display = "block";
+}
+
+// ---------- タブ ----------
+function showTab(tab) {
+  document.getElementById("tab-answer").classList.toggle("active", tab === "answer");
+  document.getElementById("tab-results").classList.toggle("active", tab === "results");
+  document.getElementById("panel-answer").style.display = tab === "answer" ? "block" : "none";
+  document.getElementById("panel-done").style.display = "none";
+  document.getElementById("panel-results").style.display = tab === "results" ? "block" : "none";
+  if (tab === "results") loadResponses();
+}
+
+// ---------- 送信(Supabaseへ保存) ----------
+async function submitResponse() {
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  btn.textContent = "送信中...";
+  const errEl = document.getElementById("form-err");
+  errEl.style.display = "none";
+
+  const { error } = await db.from("responses").insert({
+    name: document.getElementById("f-name").value.trim(),
+    events: picked,
+    timing: document.getElementById("f-timing").value,
+    budget: document.getElementById("f-budget").value,
+    comment: document.getElementById("f-comment").value.trim(),
+  });
+
+  btn.textContent = "回答を送信する";
+  if (error) {
+    errEl.textContent = "保存に失敗しました:" + error.message;
+    errEl.style.display = "block";
+    btn.disabled = false;
+    return;
+  }
+  document.getElementById("panel-answer").style.display = "none";
+  document.getElementById("panel-done").style.display = "block";
+}
+
+// ---------- 結果読み込み ----------
+async function loadResponses() {
+  const panel = document.getElementById("panel-results");
+  panel.innerHTML = `<div class="empty">読み込み中...</div>`;
+  const { data, error } = await db.from("responses").select("*").order("created_at", { ascending: true });
+  if (error) {
+    panel.innerHTML = `<div class="empty">読み込みエラー:${error.message}<br/><button class="ghost-btn" onclick="loadResponses()">🔄 再読み込み</button></div>`;
+    return;
+  }
+  responses = data || [];
+  renderResults();
+}
+
+function renderResults() {
+  const panel = document.getElementById("panel-results");
+  if (responses.length === 0) {
+    panel.innerHTML = `<div class="empty">まだ回答がありません。<br/>「回答する」タブから最初の1票をどうぞ!<br/><button class="ghost-btn" onclick="loadResponses()">🔄 再読み込み</button></div>`;
+    return;
+  }
+  const counts = EVENTS.map(e => ({ ...e, n: responses.filter(r => (r.events || []).includes(e.id)).length }))
+    .sort((a, b) => b.n - a.n);
+  const maxN = Math.max(1, ...counts.map(c => c.n));
+  const comments = responses.filter(r => r.comment);
+
+  panel.innerHTML = `
+    <p class="count-banner">現在の回答数:${responses.length}件
+      <button class="mini-btn" onclick="loadResponses()">🔄 更新</button>
+    </p>
+    <p class="section-title">人気イベントランキング</p>
+    ${counts.map((c, i) => `
+      <div class="bar-row">
+        <div class="bar-head"><span>${c.emoji} ${c.label}</span><span>${c.n}票</span></div>
+        <div class="bar-track"><div class="bar-fill ${i === 0 && c.n > 0 ? "top" : ""}" style="width:${(c.n / maxN) * 100}%"></div></div>
+      </div>`).join("")}
+    ${comments.length ? `<p class="section-title">みんなのコメント</p>` + comments.map(r =>
+      `<div class="comment-card">${escapeHtml(r.comment)}<div class="who">— ${escapeHtml(r.name)}</div></div>`).join("") : ""}
+    <button class="ai-btn" id="ai-btn" onclick="analyze()">🤖 AIに分析してもらう</button>
+    <div id="ai-area"></div>
+    <button class="reset-link" id="reset-btn" onclick="resetAll()">回答データをすべてリセット(幹事用)</button>
+  `;
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+
+// ---------- AI分析(Vercelのサーバー関数経由) ----------
+async function analyze() {
+  const btn = document.getElementById("ai-btn");
+  const area = document.getElementById("ai-area");
+  btn.disabled = true;
+  btn.textContent = "🤖 分析中...";
+  area.innerHTML = "";
+
+  const summary = responses.map(r => ({
+    希望イベント: (r.events || []).map(id => (EVENTS.find(e => e.id === id) || { label: id }).label),
+    希望時期: r.timing,
+    予算感: r.budget,
+    コメント: r.comment,
+  }));
+
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ summary, count: responses.length }),
+    });
+    const data = await res.json();
+
+    if (data.notConfigured) {
+      area.innerHTML = `<p class="info">🔑 AI分析はまだ準備中です(APIキー設定後に使えるようになります)。集計結果は上のランキングで確認できます!</p>`;
+    } else if (data.error) {
+      area.innerHTML = `<p class="err">AI分析に失敗しました:${escapeHtml(data.error)}</p>`;
+    } else {
+      const a = data.analysis;
+      area.innerHTML = `
+        <div class="ai-box">
+          <h3>傾向分析</h3>
+          <ol>${(a.insights || []).map(s => `<li>${escapeHtml(s)}</li>`).join("")}</ol>
+          <h3>おすすめ企画案</h3>
+          <div class="proposal">
+            <div class="p-title">📌 ${escapeHtml(a.proposal?.title || "")}</div>
+            <p>${escapeHtml(a.proposal?.detail || "")}</p>
+          </div>
+          ${(a.cautions || []).length ? `<h3>幹事への注意点</h3><ol>${a.cautions.map(s => `<li>${escapeHtml(s)}</li>`).join("")}</ol>` : ""}
+        </div>`;
+    }
+  } catch (e) {
+    area.innerHTML = `<p class="err">AI分析に失敗しました。もう一度試してください。</p>`;
+  }
+  btn.disabled = false;
+  btn.textContent = "🤖 AIに分析してもらう";
+}
+
+// ---------- 全リセット(2段階確認) ----------
+async function resetAll() {
+  const btn = document.getElementById("reset-btn");
+  if (!resetArmed) {
+    resetArmed = true;
+    btn.textContent = "⚠️ 本当に全員分を削除します。もう一度押すと実行";
+    btn.classList.add("arm");
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => {
+      resetArmed = false;
+      btn.textContent = "回答データをすべてリセット(幹事用)";
+      btn.classList.remove("arm");
+    }, 5000);
+    return;
+  }
+  clearTimeout(resetTimer);
+  resetArmed = false;
+  btn.textContent = "削除中...";
+  const { error } = await db.from("responses").delete().not("id", "is", null);
+  if (error) {
+    btn.textContent = "削除に失敗:" + error.message;
+    return;
+  }
+  loadResponses();
+}
+</script>
+</body>
+</html>
