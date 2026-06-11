@@ -91,6 +91,9 @@
 
     <div class="q-label"><span class="q-num">2</span>やりたいイベント(複数OK)<span class="req">必須</span></div>
     <div class="event-grid" id="event-grid"></div>
+    <div style="margin-top:10px">
+      <input type="text" id="f-other" placeholder="💡 他にやりたいイベント案があれば記入(任意)" />
+    </div>
 
     <div class="q-label"><span class="q-num">3</span>希望時期<span class="req">必須</span></div>
     <select id="f-timing" onchange="checkForm()"></select>
@@ -133,6 +136,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const EVENTS = [
   { id: "nomikai", label: "飲み会", emoji: "🍻" },
+  { id: "gohan", label: "ご飯会", emoji: "🍚" },
   { id: "bbq", label: "BBQ", emoji: "🍖" },
   { id: "sports", label: "スポーツ大会", emoji: "🏐" },
   { id: "takopa", label: "たこパ", emoji: "🐙" },
@@ -182,6 +186,7 @@ function checkForm() {
 function resetForm() {
   document.getElementById("f-name").value = "";
   document.getElementById("f-comment").value = "";
+  document.getElementById("f-other").value = "";
   document.getElementById("f-timing").value = "";
   document.getElementById("f-budget").value = "";
   picked = [];
@@ -219,6 +224,7 @@ async function submitResponse() {
     timing: document.getElementById("f-timing").value,
     budget: document.getElementById("f-budget").value,
     comment: document.getElementById("f-comment").value.trim(),
+    other_idea: document.getElementById("f-other").value.trim(),
   });
 
   btn.textContent = "回答を送信する";
@@ -255,6 +261,7 @@ function renderResults() {
     .sort((a, b) => b.n - a.n);
   const maxN = Math.max(1, ...counts.map(c => c.n));
   const comments = responses.filter(r => r.comment);
+  const ideas = responses.filter(r => r.other_idea);
 
   panel.innerHTML = `
     <p class="count-banner">現在の回答数:${responses.length}件
@@ -266,6 +273,8 @@ function renderResults() {
         <div class="bar-head"><span>${c.emoji} ${c.label}</span><span>${c.n}票</span></div>
         <div class="bar-track"><div class="bar-fill ${i === 0 && c.n > 0 ? "top" : ""}" style="width:${(c.n / maxN) * 100}%"></div></div>
       </div>`).join("")}
+    ${ideas.length ? `<p class="section-title">💡 みんなのイベント案</p>` + ideas.map(r =>
+      `<div class="comment-card">${escapeHtml(r.other_idea)}<div class="who">— ${escapeHtml(r.name)}</div></div>`).join("") : ""}
     ${comments.length ? `<p class="section-title">みんなのコメント</p>` + comments.map(r =>
       `<div class="comment-card">${escapeHtml(r.comment)}<div class="who">— ${escapeHtml(r.name)}</div></div>`).join("") : ""}
     <button class="ai-btn" id="ai-btn" onclick="analyze()">🤖 AIに分析してもらう</button>
@@ -290,6 +299,7 @@ async function analyze() {
     希望イベント: (r.events || []).map(id => (EVENTS.find(e => e.id === id) || { label: id }).label),
     希望時期: r.timing,
     予算感: r.budget,
+    その他のイベント案: r.other_idea,
     コメント: r.comment,
   }));
 
@@ -354,3 +364,4 @@ async function resetAll() {
 </script>
 </body>
 </html>
+  
